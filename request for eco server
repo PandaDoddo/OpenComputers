@@ -1,0 +1,75 @@
+Запросы к серверу экономики:
+
+   Принцип работы:
+      
+      Для работы с валютой вам понадобится соеденённая карта и специальный ключ выдаваемый для работы с сервером.
+      На сервер отправляется код операции , личный ключ и параметры операции, при условии что у вашего ключа есть права
+      на данную операцию в ответ приходит статус или результат , иначе отказ.
+      
+   Запросы:
+   
+      Виды запросов:
+      
+        get:
+        
+          Позволяет получить счет игрока:
+        
+            обязательные поля для запроса: operation , key , answearKey , user
+            ответ от сервера: balance , user , operation , answearKey , status
+          
+        set:
+          
+          Позволяет установить количество валюты на счету игрока:
+          
+            обязательные поля для запроса: operation , key , answearKey , user , amount
+            ответ от сервера: balance , user , operation , answearKey , status
+            
+        give:
+        
+          Позволяет пополнить счет игрока:
+            
+            обязательные поля для запроса: operation , key , answearKey , user , amount
+            ответ от сервера: balance , user , operation , answearKey , status
+            
+        take:
+        
+          Позволяет снять валюту со счета игрока:
+            
+            обязательные поля для запроса: operation , key , answearKey , user , amount
+            ответ от сервера: balance , user , operation , answearKey , status (в случае если статус равен false отправляет error)
+         
+         transfer:
+         
+           позволяет создать транзакцию:
+           
+             обязательные поля для запроса: operation , key , answearKey , user , amount , target , description
+             ответ от сервера: balance , user , operation , answearKey , description ,  target , transactionCode , status (в случае если статус равен false отправляет error)
+      
+      Виды событий:
+      
+        событие отправляется сервером в виде ответа с параметром operation равному 'transactionResult'
+        
+        при удачной оплате status равен true ,иначе false , а в переменной error содержится причина
+        
+        'timeout' , означает что время действия транзакции закончилось ( 120 секунд )
+        'Not enough money' , означает нехватку средств на счету игрока
+      
+      Отправление запроса:
+      
+        local serialization = require('serialization')    
+        local tunnel = require('component').tunnel
+        local request = {} -- Задаем массив который в последствии сериализуем и отправим на сервер для обработки
+        request.operation = 'get' -- Задает тип операции
+        request.key = 'private_key' -- Личный ключ 
+        request.answearKey = 'answear_key' -- Ключ для ответа , нужен дял того чтобы отсеевать нужный вам ответ
+        request.user = 'Player' -- Ник игрока счет которго вы хотите узнать
+        tunnel.send(serialization.serialize(request))
+        
+      Получение запроса:
+       
+        local serialization = require('serialization')    
+        local event = require('event')
+        local _, receiver, sender, _, _, message = event.pull('modem_message')
+        
+        local answear = serialization.unserialize(message)
+        print('На счету игрока: '..answear.user..' : '..answear.balance)
